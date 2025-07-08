@@ -1,0 +1,85 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>ch.rodano</groupId>
+	<artifactId>study-test</artifactId>
+	<version>1.2.0</version>
+
+	<name>TEST</name>
+	<url>https://test.rodano.ch</url>
+
+	<repositories>
+		<repository>
+			<id>github</id>
+			<name>GitHub Packages</name>
+			<url>https://maven.pkg.github.com/rodano/rodano</url>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
+		</repository>
+	</repositories>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<maven.compiler.release>23</maven.compiler.release>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>ch.rodano</groupId>
+			<artifactId>rodano-backend</artifactId>
+			<version>DEV-SNAPSHOT</version>
+		</dependency>
+	</dependencies>
+
+	<!--
+	this section is required to be able to run the project using Spring Boot directly
+	the version should match the version of the rodano-backend dependency
+	this is to avoid downloading extra dependencies when compiling the custom code
+	-->
+	<build>
+		<finalName>rodano-study-test</finalName>
+
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>3.1.0</version>
+				<executions>
+					<execution>
+						<phase>prepare-package</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<configuration>
+							<tasks>
+								<delete>
+									<fileset dir="${project.build.outputDirectory}/profile/" erroronmissingdir="false">
+										<include name="**/application-local.properties"/>
+									</fileset>
+								</delete>
+							</tasks>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+				<version>3.4.3</version>
+				<configuration>
+					<mainClass>ch.rodano.application.RodanoApplication</mainClass>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>repackage</goal>
+							<goal>build-info</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+</project>

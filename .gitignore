@@ -1,0 +1,8 @@
+#manager
+/database
+
+#backend
+/backend/target
+/backend/test-report.xml
+/backend/testresults
+/backend/velocity.log

@@ -1,0 +1,6 @@
+{
+	"files.exclude": {
+		"backend/target": true,
+		"database": true
+	}
+}
