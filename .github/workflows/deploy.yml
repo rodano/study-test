@@ -1,0 +1,94 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Docker image tag"
+        required: false
+        default: "dev"
+      initialize_database:
+        description: "Reset the database?"
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy study using Ansible playbook from rodano/rodano
+    runs-on: ubuntu-latest
+    environment: demo
+
+    env:
+      RODANO_TAG: ${{ github.event.inputs.tag || 'dev' }}
+      INITIALIZE_DATABASE: ${{ github.event.inputs.initialize_database || 'false' }}
+      ANSIBLE_HOST_KEY_CHECKING: "False"
+
+    steps:
+      - name: Checkout study repository
+        uses: actions/checkout@v7
+        with:
+          path: study
+
+      - name: Checkout rodano/rodano files needed for deployment (sparse)
+        uses: actions/checkout@v7
+        with:
+          repository: rodano/rodano
+          ref: dev
+          path: rodano
+          sparse-checkout: |
+            ansible
+            docker-compose.yml
+            .env
+          sparse-checkout-cone-mode: false
+
+      - name: Show fetched rodano files
+        run: |
+          echo "Files fetched from main Rodano repository:"
+          find rodano -maxdepth 3 -type f | sort
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+          cache: "pip"
+
+      - name: Install Ansible
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ansible
+
+      - name: Install Ansible Galaxy dependencies
+        working-directory: rodano/ansible
+        run: ansible-galaxy install -r requirements.yml
+
+      - name: Configure SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+      - name: Run Ansible deployment playbook
+        working-directory: rodano/ansible
+        env:
+          STUDY_PATH: ${{ github.workspace }}/study
+        run: |
+          ansible-playbook \
+            --extra-vars "initialize_database=$INITIALIZE_DATABASE" \
+            --extra-vars "rodano_tag=$RODANO_TAG" \
+            deploy.yml
+
+      - name: Clean up SSH key
+        if: always()
+        run: |
+          rm -f ~/.ssh/id_ed25519
